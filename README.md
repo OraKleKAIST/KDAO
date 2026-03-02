@@ -137,6 +137,10 @@ KDAOGovernor:       0x...
 
 #### 로컬에서 상호작용 테스트
 
+배포 후 TimelockController가 NFT의 owner이므로, Anvil의 impersonation 기능으로
+Timelock 주소를 사칭하여 NFT 함수를 직접 호출합니다.
+이는 실제 거버넌스 실행 시(Timelock → NFT 호출)와 동일한 흐름입니다.
+
 ```bash
 # 변수 설정 (위 배포 출력에서 복사)
 NFT=<KDAOMembershipNFT 주소>
@@ -145,38 +149,21 @@ RPC=http://127.0.0.1:8545
 PK=0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80
 MY_ADDR=0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266
 
-# 1) 기수 등록 (TimelockController를 통해)
-REGISTER_DATA=$(cast calldata "registerCohort(uint256,uint256,uint256)" 1 $(date +%s) $(($(date +%s) + 15552000)))
+# Timelock 주소를 impersonate (가스비 충전 포함)
+cast rpc anvil_impersonateAccount $TIMELOCK --rpc-url $RPC
+cast rpc anvil_setBalance $TIMELOCK 0x1000000000000000000 --rpc-url $RPC
 
-cast send $TIMELOCK \
-  "schedule(address,uint256,bytes,bytes32,bytes32,uint256)" \
-  $NFT 0 $REGISTER_DATA 0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000001 0 \
-  --rpc-url $RPC --private-key $PK
-
-# Timelock delay 경과 시뮬레이션 (1시간)
-cast rpc anvil_increaseTime 3600 --rpc-url $RPC
-cast rpc anvil_mine 1 --rpc-url $RPC
-
-cast send $TIMELOCK \
-  "execute(address,uint256,bytes,bytes32,bytes32)" \
-  $NFT 0 $REGISTER_DATA 0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000001 \
-  --rpc-url $RPC --private-key $PK
+# 1) 기수 등록 (Timelock을 사칭하여 직접 호출)
+cast send $NFT \
+  "registerCohort(uint256,uint256,uint256)" \
+  1 $(date +%s) $(($(date +%s) + 15552000)) \
+  --from $TIMELOCK --unlocked --rpc-url $RPC
 
 # 2) NFT 민팅 (cohortId=1)
-MINT_DATA=$(cast calldata "safeMint(address,uint256)" $MY_ADDR 1)
-
-cast send $TIMELOCK \
-  "schedule(address,uint256,bytes,bytes32,bytes32,uint256)" \
-  $NFT 0 $MINT_DATA 0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000002 0 \
-  --rpc-url $RPC --private-key $PK
-
-cast rpc anvil_increaseTime 3600 --rpc-url $RPC
-cast rpc anvil_mine 1 --rpc-url $RPC
-
-cast send $TIMELOCK \
-  "execute(address,uint256,bytes,bytes32,bytes32)" \
-  $NFT 0 $MINT_DATA 0x0000000000000000000000000000000000000000000000000000000000000000 0x0000000000000000000000000000000000000000000000000000000000000002 \
-  --rpc-url $RPC --private-key $PK
+cast send $NFT \
+  "safeMint(address,uint256)" \
+  $MY_ADDR 1 \
+  --from $TIMELOCK --unlocked --rpc-url $RPC
 
 # 3) 투표권 위임 (자기 자신에게)
 cast send $NFT "delegate(address)" $MY_ADDR --rpc-url $RPC --private-key $PK
