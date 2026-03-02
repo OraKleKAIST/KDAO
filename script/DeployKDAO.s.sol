@@ -43,7 +43,14 @@ contract DeployKDAO is Script {
         // 5. Renounce deployer's admin role on TimelockController
         timelock.renounceRole(timelock.DEFAULT_ADMIN_ROLE(), deployer);
 
-        // 6. Transfer NFT ownership to TimelockController (DAO controls minting)
+        // 6. Bootstrap: register cohort 1 and mint one NFT to deployer before
+        //    ownership moves to Timelock. Without this, no one can propose since
+        //    Governor requires proposalThreshold = 1 vote.
+        nft.registerCohort(1, block.timestamp, block.timestamp + 15552000);
+        nft.safeMint(deployer, 1);
+        console.log("Bootstrap NFT minted to deployer:", deployer);
+
+        // 7. Transfer NFT ownership to TimelockController (DAO controls minting)
         nft.transferOwnership(address(timelock));
 
         vm.stopBroadcast();
