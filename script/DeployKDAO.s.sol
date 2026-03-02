@@ -24,7 +24,7 @@ contract DeployKDAO is Script {
         //    - deployer as temporary admin for role setup
         address[] memory emptyArray = new address[](0);
         TimelockController timelock = new TimelockController({
-            minDelay: 1 days,
+            minDelay: 1 hours,
             proposers: emptyArray,
             executors: emptyArray,
             admin: deployer

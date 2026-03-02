@@ -11,7 +11,7 @@ import {TimelockController} from "@openzeppelin/contracts/governance/TimelockCon
 import {IVotes} from "@openzeppelin/contracts/governance/utils/IVotes.sol";
 
 /// @title KDAO Governor
-/// @notice On-chain governance for the KDAO alumni community.
+/// @notice On-chain governance for KDAO club officers.
 ///         Tally-compatible (standard OpenZeppelin Governor interface).
 contract KDAOGovernor is
     Governor,
@@ -25,9 +25,9 @@ contract KDAOGovernor is
     /// @param timelock   The TimelockController that holds the treasury.
     constructor(IVotes token, TimelockController timelock)
         Governor("KDAO Governor")
-        GovernorSettings(7200, 50400, 1) // votingDelay ~1d, votingPeriod ~1w, threshold 1 NFT
+        GovernorSettings(0, 21600, 1) // votingDelay 0, votingPeriod ~3d, threshold 1 NFT
         GovernorVotes(token)
-        GovernorVotesQuorumFraction(10) // 10% quorum
+        GovernorVotesQuorumFraction(50) // 50% quorum
         GovernorTimelockControl(timelock)
     {}
 
