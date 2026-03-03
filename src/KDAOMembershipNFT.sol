@@ -31,7 +31,7 @@ contract KDAOMembershipNFT is ERC721, ERC721Enumerable, ERC721Votes, Ownable {
 
     struct CohortInfo {
         uint256 termStart; // unix timestamp
-        uint256 termEnd;   // unix timestamp
+        uint256 termEnd; // unix timestamp
     }
 
     uint256 private _nextTokenId;
@@ -141,12 +141,7 @@ contract KDAOMembershipNFT is ERC721, ERC721Enumerable, ERC721Votes, Ownable {
         super._increaseBalance(account, amount);
     }
 
-    function supportsInterface(bytes4 interfaceId)
-        public
-        view
-        override(ERC721, ERC721Enumerable)
-        returns (bool)
-    {
+    function supportsInterface(bytes4 interfaceId) public view override(ERC721, ERC721Enumerable) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
 }

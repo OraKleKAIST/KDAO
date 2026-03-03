@@ -14,19 +14,19 @@ contract KDAOGovernorTest is Test {
     KDAOGovernor public governor;
 
     address public deployer = makeAddr("deployer");
-    address public alice   = makeAddr("alice");
-    address public bob     = makeAddr("bob");
-    address public carol   = makeAddr("carol");
-    address public dave    = makeAddr("dave");
+    address public alice = makeAddr("alice");
+    address public bob = makeAddr("bob");
+    address public carol = makeAddr("carol");
+    address public dave = makeAddr("dave");
 
     uint256 constant TIMELOCK_DELAY = 1 hours;
-    uint256 constant VOTING_DELAY   = 0;
-    uint256 constant VOTING_PERIOD  = 21600; // ~3 days
+    uint256 constant VOTING_DELAY = 0;
+    uint256 constant VOTING_PERIOD = 21600; // ~3 days
 
     // Cohort fixture
-    uint256 constant COHORT_1     = 1;
+    uint256 constant COHORT_1 = 1;
     uint256 constant TERM_START_1 = 1_700_000_000;
-    uint256 constant TERM_END_1   = 1_715_000_000;
+    uint256 constant TERM_END_1 = 1_715_000_000;
 
     function setUp() public {
         vm.startPrank(deployer);
@@ -38,8 +38,8 @@ contract KDAOGovernorTest is Test {
 
         governor = new KDAOGovernor(IVotes(address(nft)), timelock);
 
-        timelock.grantRole(timelock.PROPOSER_ROLE(),  address(governor));
-        timelock.grantRole(timelock.EXECUTOR_ROLE(),  address(governor));
+        timelock.grantRole(timelock.PROPOSER_ROLE(), address(governor));
+        timelock.grantRole(timelock.EXECUTOR_ROLE(), address(governor));
         timelock.grantRole(timelock.CANCELLER_ROLE(), address(governor));
         timelock.renounceRole(timelock.DEFAULT_ADMIN_ROLE(), deployer);
 
@@ -79,7 +79,7 @@ contract KDAOGovernorTest is Test {
         _registerCohort1();
         (uint256 start, uint256 end) = nft.cohorts(COHORT_1);
         assertEq(start, TERM_START_1);
-        assertEq(end,   TERM_END_1);
+        assertEq(end, TERM_END_1);
     }
 
     function test_MintWithCohort() public {
@@ -188,13 +188,13 @@ contract KDAOGovernorTest is Test {
 
         uint256 cohort2 = 2;
         nft.registerCohort(cohort2, TERM_END_1, TERM_END_1 + 15_000_000);
-        nft.safeMint(dave,  cohort2);
+        nft.safeMint(dave, cohort2);
         nft.safeMint(alice, cohort2); // alice가 2기에도 운영진으로 재참여
         vm.stopPrank();
 
         assertEq(nft.totalSupply(), 2);
         assertEq(nft.cohortTokens(COHORT_1).length, 0);
-        assertEq(nft.cohortTokens(cohort2).length,  2);
+        assertEq(nft.cohortTokens(cohort2).length, 2);
         assertEq(nft.tokenCohort(3), cohort2);
         assertEq(nft.tokenCohort(4), cohort2);
     }
@@ -204,8 +204,8 @@ contract KDAOGovernorTest is Test {
     // =========================================================================
 
     function test_GovernorSettings() public view {
-        assertEq(governor.votingDelay(),     VOTING_DELAY);
-        assertEq(governor.votingPeriod(),    VOTING_PERIOD);
+        assertEq(governor.votingDelay(), VOTING_DELAY);
+        assertEq(governor.votingPeriod(), VOTING_PERIOD);
         assertEq(governor.proposalThreshold(), 1);
         assertEq(governor.quorumNumerator(), 50);
         assertEq(governor.quorumDenominator(), 100);
@@ -230,13 +230,13 @@ contract KDAOGovernorTest is Test {
         vm.deal(address(timelock), 1 ether);
 
         // Propose: send 0.1 ETH to alice
-        address[] memory targets   = new address[](1);
-        uint256[] memory values    = new uint256[](1);
-        bytes[]   memory calldatas = new bytes[](1);
-        targets[0]   = alice;
-        values[0]    = 0.1 ether;
+        address[] memory targets = new address[](1);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
+        targets[0] = alice;
+        values[0] = 0.1 ether;
         calldatas[0] = "";
-        string memory description  = "Send 0.1 ETH to Alice for ops work";
+        string memory description = "Send 0.1 ETH to Alice for ops work";
 
         vm.prank(alice);
         uint256 proposalId = governor.propose(targets, values, calldatas, description);
@@ -247,10 +247,14 @@ contract KDAOGovernorTest is Test {
         assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Active));
 
         // 4명 중 3명 찬성 (quorum 50% = 2표 필요, 3표 For → 통과)
-        vm.prank(alice); governor.castVote(proposalId, 1);
-        vm.prank(bob);   governor.castVote(proposalId, 1);
-        vm.prank(carol); governor.castVote(proposalId, 1);
-        vm.prank(dave);  governor.castVote(proposalId, 0); // Against
+        vm.prank(alice);
+        governor.castVote(proposalId, 1);
+        vm.prank(bob);
+        governor.castVote(proposalId, 1);
+        vm.prank(carol);
+        governor.castVote(proposalId, 1);
+        vm.prank(dave); // Against
+        governor.castVote(proposalId, 0);
 
         vm.roll(block.number + VOTING_PERIOD + 1);
         assertEq(uint256(governor.state(proposalId)), uint256(IGovernor.ProposalState.Succeeded));
@@ -279,9 +283,9 @@ contract KDAOGovernorTest is Test {
 
         vm.roll(block.number + 1);
 
-        address[] memory targets   = new address[](1);
-        uint256[] memory values    = new uint256[](1);
-        bytes[]   memory calldatas = new bytes[](1);
+        address[] memory targets = new address[](1);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
 
         vm.prank(alice);
         uint256 proposalId = governor.propose(targets, values, calldatas, "Low participation");
@@ -297,9 +301,9 @@ contract KDAOGovernorTest is Test {
 
     function test_ProposalThresholdReverts() public {
         // NFT 없는 계정은 제안 불가
-        address[] memory targets   = new address[](1);
-        uint256[] memory values    = new uint256[](1);
-        bytes[]   memory calldatas = new bytes[](1);
+        address[] memory targets = new address[](1);
+        uint256[] memory values = new uint256[](1);
+        bytes[] memory calldatas = new bytes[](1);
 
         vm.prank(alice);
         vm.expectRevert();
@@ -319,12 +323,14 @@ contract KDAOGovernorTest is Test {
         _mint(bob);
 
         // Bob delegates to Alice
-        vm.prank(alice); nft.delegate(alice);
-        vm.prank(bob);   nft.delegate(alice);
+        vm.prank(alice);
+        nft.delegate(alice);
+        vm.prank(bob);
+        nft.delegate(alice);
 
         vm.roll(block.number + 1);
 
         assertEq(nft.getVotes(alice), 2);
-        assertEq(nft.getVotes(bob),   0);
+        assertEq(nft.getVotes(bob), 0);
     }
 }

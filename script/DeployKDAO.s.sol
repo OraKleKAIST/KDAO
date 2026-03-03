@@ -23,12 +23,8 @@ contract DeployKDAO is Script {
         //    - Empty proposers/executors for now; will grant to Governor below
         //    - deployer as temporary admin for role setup
         address[] memory emptyArray = new address[](0);
-        TimelockController timelock = new TimelockController({
-            minDelay: 1 hours,
-            proposers: emptyArray,
-            executors: emptyArray,
-            admin: deployer
-        });
+        TimelockController timelock =
+            new TimelockController({minDelay: 1 hours, proposers: emptyArray, executors: emptyArray, admin: deployer});
         console.log("TimelockController:", address(timelock));
 
         // 3. Deploy Governor
