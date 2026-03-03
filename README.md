@@ -1,6 +1,7 @@
 # KDAO - 학회 운영진 의사결정 플랫폼
 
 [![CI](https://github.com/OraKleKAIST/KDAO/actions/workflows/ci.yml/badge.svg)](https://github.com/OraKleKAIST/KDAO/actions/workflows/ci.yml)
+[![Coverage](https://codecov.io/gh/OraKleKAIST/KDAO/branch/main/graph/badge.svg)](https://codecov.io/gh/OraKleKAIST/KDAO)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Solidity](https://img.shields.io/badge/Solidity-0.8.24-blue)](https://soliditylang.org)
 [![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-v5.5.0-blue)](https://docs.openzeppelin.com/contracts/5.x/)
@@ -345,7 +346,7 @@ PR 및 `main` 브랜치 push 시 자동 실행됩니다. 모든 job은 `lint →
 | **lint** | `forge fmt --check` | 코드 포맷 검사. 가장 먼저 실행되어 빠른 피드백 제공. |
 | **build** | `forge build --sizes` | 컴파일 + EIP-170 컨트랙트 크기(24.576 KB) 초과 여부 확인. |
 | **test** | `forge test -vvv` | 전체 테스트 실행. |
-| **coverage** | `forge coverage --report summary` | 라인·브랜치·함수 커버리지 리포트 출력. |
+| **coverage** | `forge coverage --report lcov` | `lcov.info` 생성 후 Codecov에 업로드. PR 코멘트로 커버리지 diff 자동 표시. |
 | **gas-snapshot** | `forge snapshot --check` | `.gas-snapshot` 파일과 비교하여 가스 변화 감지. 증감 무관 diff 발생 시 실패 — 의도적 변경이면 `forge snapshot`으로 파일 갱신 후 커밋. |
 | **slither** | `crytic/slither-action` | 정적 분석. `lib/`, `test/`, `script/` 제외, `src/`만 검사. High 이상 시 실패. 결과는 GitHub Security 탭(Code Scanning)에 SARIF로 업로드. |
 | **deploy-dry-run** | `forge script` (no `--broadcast`) | 배포 스크립트를 로컬 EVM에서 시뮬레이션. 실제 네트워크 전송 없이 배포 로직의 revert 여부 사전 검출. |

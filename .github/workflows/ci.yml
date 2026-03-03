@@ -59,6 +59,9 @@ jobs:
         run: forge test -vvv
 
   # ─── 4. Coverage ──────────────────────────────────────────────────────────
+  # lcov.info를 생성하여 Codecov에 업로드.
+  # PR 코멘트로 커버리지 diff를 자동으로 표시하고 README 배지를 동적으로 유지.
+  # Private 레포는 Settings → Secrets → CODECOV_TOKEN 설정 필요.
   coverage:
     name: Coverage
     runs-on: ubuntu-latest
@@ -71,8 +74,14 @@ jobs:
 
       - uses: foundry-rs/foundry-toolchain@v1
 
-      - name: Generate coverage report
-        run: forge coverage --report summary
+      - name: Generate lcov report
+        run: forge coverage --report lcov
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
 
   # ─── 5. Gas Snapshot ──────────────────────────────────────────────────────
   # .gas-snapshot 파일과 비교하여 가스 변화를 감지.
