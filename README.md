@@ -1,5 +1,10 @@
 # KDAO - 학회 운영진 의사결정 플랫폼
 
+[![CI](https://github.com/OraKleKAIST/KDAO/actions/workflows/ci.yml/badge.svg)](https://github.com/OraKleKAIST/KDAO/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Solidity](https://img.shields.io/badge/Solidity-0.8.24-blue)](https://soliditylang.org)
+[![OpenZeppelin](https://img.shields.io/badge/OpenZeppelin-v5.5.0-blue)](https://docs.openzeppelin.com/contracts/5.x/)
+
 블록체인 학회 한 기수의 운영진들을 위한 EVM 기반 온체인 의사결정 플랫폼입니다.
 운영진에게 Soulbound NFT를 발급하여 1인 1표 거버넌스를 실현하며, [Tally](https://www.tally.xyz/) 웹앱과 호환됩니다.
 기수 교체 시 이전 기수 NFT를 일괄 회수하고 새 기수 운영진에게 재발급하는 기능을 제공합니다.
@@ -330,6 +335,39 @@ nft.transferOwnership(address(timelock));
 
 - 장점: 배포 직후부터 신뢰 가정 없이 분산 거버넌스가 작동합니다.
 - 단점: 배포 전에 운영진 전원(또는 과반수)의 지갑 주소를 수집해야 합니다.
+
+## CI
+
+PR 및 `main` 브랜치 push 시 자동 실행됩니다. 모든 job은 `lint → build` 순서로 선행되며, 이후 병렬 실행됩니다.
+
+| Job | 명령어 | 설명 |
+|-----|--------|------|
+| **lint** | `forge fmt --check` | 코드 포맷 검사. 가장 먼저 실행되어 빠른 피드백 제공. |
+| **build** | `forge build --sizes` | 컴파일 + EIP-170 컨트랙트 크기(24.576 KB) 초과 여부 확인. |
+| **test** | `forge test -vvv` | 전체 테스트 실행. |
+| **coverage** | `forge coverage --report summary` | 라인·브랜치·함수 커버리지 리포트 출력. |
+| **gas-snapshot** | `forge snapshot --check` | `.gas-snapshot` 파일과 비교하여 가스 변화 감지. 증감 무관 diff 발생 시 실패 — 의도적 변경이면 `forge snapshot`으로 파일 갱신 후 커밋. |
+| **slither** | `crytic/slither-action` | 정적 분석. `lib/`, `test/`, `script/` 제외, `src/`만 검사. High 이상 시 실패. 결과는 GitHub Security 탭(Code Scanning)에 SARIF로 업로드. |
+| **deploy-dry-run** | `forge script` (no `--broadcast`) | 배포 스크립트를 로컬 EVM에서 시뮬레이션. 실제 네트워크 전송 없이 배포 로직의 revert 여부 사전 검출. |
+
+### 배포 워크플로
+
+| 워크플로 | 트리거 | 조건 |
+|----------|--------|------|
+| `deploy-testnet.yml` | CI 통과 후 자동 | GitHub Environments `testnet` 승인 필요 |
+| `deploy-mainnet.yml` | 수동 (`workflow_dispatch`) | 확인 문자열 입력 + `mainnet` 승인 필요 |
+
+GitHub 배포 승인 게이트 설정: `Settings → Environments → testnet / mainnet → Required Reviewers`
+
+### gas-snapshot 갱신 방법
+
+테스트 로직 변경으로 가스가 바뀌었다면:
+
+```bash
+forge snapshot        # .gas-snapshot 갱신
+git add .gas-snapshot
+git commit -m "chore: update gas snapshot"
+```
 
 ## Project Structure
 
