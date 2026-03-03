@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  # ─── 1. Lint ──────────────────────────────────────────────────────────────
+  # 가장 빠른 검사를 먼저 실행하여 포맷 오류를 즉시 피드백.
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Check formatting
+        run: forge fmt --check
+
+  # ─── 2. Build ─────────────────────────────────────────────────────────────
+  # EIP-170 한도(24.576 KB) 초과 여부를 --sizes 플래그로 함께 확인.
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    needs: lint
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Build and check contract sizes
+        run: forge build --sizes
+
+  # ─── 3. Test ──────────────────────────────────────────────────────────────
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Run tests
+        run: forge test -vvv
+
+  # ─── 4. Coverage ──────────────────────────────────────────────────────────
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Generate coverage report
+        run: forge coverage --report summary
+
+  # ─── 5. Gas Snapshot ──────────────────────────────────────────────────────
+  # .gas-snapshot 파일과 비교하여 가스 변화를 감지.
+  # 가스가 증가하거나 감소해도 diff가 생기면 실패 → 개발자가 의도적으로 승인 후 스냅샷 갱신.
+  gas-snapshot:
+    name: Gas Snapshot
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Check gas snapshot
+        run: forge snapshot --check
+
+  # ─── 6. Slither ───────────────────────────────────────────────────────────
+  # lib/, test/, script/는 필터링하여 src/만 분석.
+  # fail-on: high — 현재 확인된 Medium 이하 항목은 audit-report.md에 기록됨.
+  # SARIF 결과는 GitHub Security 탭(Code Scanning)에 업로드.
+  slither:
+    name: Slither
+    runs-on: ubuntu-latest
+    needs: build
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - name: Run Slither
+        uses: crytic/slither-action@v0.4.0
+        id: slither
+        continue-on-error: true
+        with:
+          slither-args: '--filter-paths "lib/,test/,script/"'
+          fail-on: high
+          sarif: results.sarif
+
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: results.sarif
+
+  # ─── 7. Deploy Dry-Run ────────────────────────────────────────────────────
+  # --broadcast 없이 로컬 EVM에서 배포 스크립트를 시뮬레이션.
+  # 실제 네트워크 연결 없이 배포 로직의 revert 여부를 사전에 검출.
+  deploy-dry-run:
+    name: Deploy Dry-Run
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Simulate deployment (no broadcast)
+        run: |
+          forge script script/DeployKDAO.s.sol \
+            --sender 0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266

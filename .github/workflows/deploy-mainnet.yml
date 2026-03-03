@@ -1,0 +1,61 @@
+name: Deploy (Mainnet)
+
+# 메인넷 배포는 항상 수동으로만 트리거합니다.
+# 아래 두 단계의 승인을 모두 통과해야 배포가 실행됩니다:
+#   1. 확인 문자열 입력 ("DEPLOY-MAINNET")
+#   2. GitHub Settings → Environments → mainnet 의 Required Reviewers 승인
+#
+# 필요한 GitHub Secrets:
+#   MAINNET_RPC_URL       — Mainnet RPC 엔드포인트 (Alchemy/Infura 등)
+#   DEPLOYER_ADDRESS      — 배포자 주소 (시뮬레이션용, 0x 포함)
+#   DEPLOYER_PRIVATE_KEY  — 배포자 개인키 (0x 포함)
+#   ETHERSCAN_API_KEY     — Etherscan 컨트랙트 검증용 API 키
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "DEPLOY-MAINNET" to confirm'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy to Mainnet
+    runs-on: ubuntu-latest
+    # 확인 문자열 불일치 시 즉시 종료
+    if: ${{ github.event.inputs.confirm == 'DEPLOY-MAINNET' }}
+    # mainnet 환경 보호 규칙 적용 (GitHub Settings에서 Required Reviewers 설정 필수)
+    environment: mainnet
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: foundry-rs/foundry-toolchain@v1
+
+      # 실제 메인넷 상태를 포크하여 시뮬레이션 — broadcast 전 최종 검증
+      - name: Simulate deployment against mainnet fork
+        env:
+          MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
+        run: |
+          forge script script/DeployKDAO.s.sol \
+            --rpc-url $MAINNET_RPC_URL \
+            --sender ${{ secrets.DEPLOYER_ADDRESS }}
+
+      - name: Deploy to Mainnet
+        env:
+          MAINNET_RPC_URL: ${{ secrets.MAINNET_RPC_URL }}
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+          ETHERSCAN_API_KEY: ${{ secrets.ETHERSCAN_API_KEY }}
+        run: |
+          forge script script/DeployKDAO.s.sol \
+            --rpc-url $MAINNET_RPC_URL \
+            --private-key $DEPLOYER_PRIVATE_KEY \
+            --broadcast \
+            --verify \
+            --etherscan-api-key $ETHERSCAN_API_KEY
